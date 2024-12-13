@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Таблица из текстового файла</title>
+    
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Изменено на flex-start для нормального отображения */
+            height: 100vh;
+            margin: 0;
+            background-color: #121212; /* Тёмный фон страницы */
+            color: #ffffff; /* Цвет текста */
+            overflow-y: auto; /* Включаем вертикальную прокрутку для всего тела */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse; /* Убираем пробелы между ячейками */
+            table-layout: fixed; /* Фиксированная ширина ячеек */
+        }
+        th, td {
+            border: 1px solid #444; /* Цвет границ ячеек */
+            text-align: center;
+            padding: 10px;
+            cursor: pointer; /* Указатель при наведении на заголовки */
+            height: 40px; /* Высота строк */
+        }
+        th {
+            background-color: #333; /* Цвет фона заголовков */
+        }
+        tr:hover {
+            background-color: #555; /* Цвет фона при наведении на строку */
+        }
+
+        /* Стилизация скроллбара для страницы */
+        ::-webkit-scrollbar {
+            width: 32px; /* Увеличенная ширина скроллбара (200% от предыдущих 16px) */
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2c2c2c; /* Цвет дорожки скроллбара */
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #888; /* Цвет ползунка скроллбара */
+            border-radius: 8px; /* Закругление углов ползунка */
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: #555; /* Цвет ползунка при наведении курсора */
+        }
+
+        /* Стили для Firefox */
+        body {
+            scrollbar-width: thin; /* Устанавливаем ширину скроллбара */
+            scrollbar-color: #888 #2c2c2c; /* Цвет ползунка и дорожки */
+        }
+    </style>
+</head>
+<body>
+
+<table id="data-table">
+    <thead>
+        <tr>
+            <th>Позиция</th>
+            <th id="nickname-header">Никнейм</th>
+            <th id="number-header">Число</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Данные будут загружены сюда -->
+    </tbody>
+</table>
+
+<script>
+    let lastData = ''; // Переменная для хранения последнего загруженного содержимого
+    let sortOrderNickname = true; // Порядок сортировки по никнейму
+    let sortOrderNumber = true; // Порядок сортировки по числу
+    let currentSortBy = 'number'; // Текущий критерий сортировки
+
+    async function loadTableData() {
+        const response = await fetch('tab.txt'); // Замените на URL вашего текстового файла
+        const data = await response.text();
+
+        // Проверяем, изменились ли данные
+        if (data !== lastData) {
+            lastData = data; // Обновляем последнее загруженное содержимое
+            const rows = data.split('\n').map(line => line.split(' '));
+            
+            // Преобразуем строки в объекты
+            const parsedRows = rows.map((row) => ({
+                nickname: row[0],
+                number: parseInt(row[1], 10)
+            }));
+
+            // Сортируем по текущему критерию сортировки
+            if (currentSortBy === 'nickname') {
+                parsedRows.sort((a, b) => sortOrderNickname ? a.nickname.localeCompare(b.nickname) : b.nickname.localeCompare(a.nickname));
+            } else {
+                parsedRows.sort((a, b) => sortOrderNumber ? a.number - b.number : b.number - a.number);
+            }
+
+            renderTable(parsedRows);
+        }
+    }
+
+    function renderTable(rows) {
+        const tbody = document.querySelector('#data-table tbody');
+        tbody.innerHTML = ''; // Очищаем существующие строки
+
+        rows.forEach((row, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td> <!-- Нумерация по порядку в таблице -->
+                <td>${row.nickname}</td>
+                <td>${row.number}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    document.getElementById('nickname-header').addEventListener('click', () => {
+        sortOrderNickname = !sortOrderNickname; // Переключаем порядок сортировки
+        currentSortBy = 'nickname'; // Устанавливаем текущий критерий сортировки
+
+        const rows = Array.from(document.querySelectorAll('#data-table tbody tr')).map(tr => ({
+            nickname: tr.cells[1].innerText,
+            number: parseInt(tr.cells[2].innerText, 10)
+        }));
+
+        const sortedRows = sortByNickname(rows);
+        
+        renderTable(sortedRows);
+    });
+
+    document.getElementById('number-header').addEventListener('click', () => {
+        sortOrderNumber = !sortOrderNumber; // Переключаем порядок сортировки
+        currentSortBy = 'number'; // Устанавливаем текущий критерий сортировки
+
+        const rows = Array.from(document.querySelectorAll('#data-table tbody tr')).map(tr => ({
+            nickname: tr.cells[1].innerText,
+            number: parseInt(tr.cells[2].innerText, 10)
+        }));
+
+        const sortedRows = sortByNumber(rows);
+        
+        renderTable(sortedRows);
+    });
+
+    function sortByNickname(rows) {
+        return rows.sort((a, b) => sortOrderNickname ? a.nickname.localeCompare(b.nickname) : b.nickname.localeCompare(a.nickname));
+    }
+
+    function sortByNumber(rows) {
+        return rows.sort((a, b) => sortOrderNumber ? a.number - b.number : b.number - a.number);
+    }
+
+    // Загружаем данные сразу и затем каждые 2 секунды
+    loadTableData();
+    setInterval(loadTableData, 2000);
+</script>
+
+</body>
+</html>
